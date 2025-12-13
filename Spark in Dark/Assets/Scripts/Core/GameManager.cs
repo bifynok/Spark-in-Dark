@@ -1,27 +1,35 @@
 using UnityEngine;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    private void Awake()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Init()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null) return;
 
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        var gameManagerGO = new GameObject("GameManager");
+        Instance = gameManagerGO.AddComponent<GameManager>();
+        DontDestroyOnLoad(gameManagerGO);
     }
 
     public void StartNewGame()
     {
         SceneLoader.Instance.LoadSceneAdditive("Scene_Map", true, () =>
         {
-            SceneLoader.Instance.UnloadScene("Scene_MainMenu");
+            var mapManager = Object.FindFirstObjectByType<MapManager>();
+            mapManager.OnSceneActivated();
+
+            StartCoroutine(UnloadMenuNextFrame());
         });
+    }
+
+    private IEnumerator UnloadMenuNextFrame()
+    {
+        yield return null;
+        SceneLoader.Instance.UnloadScene("Scene_MainMenu");
     }
 
     public void QuitGame()

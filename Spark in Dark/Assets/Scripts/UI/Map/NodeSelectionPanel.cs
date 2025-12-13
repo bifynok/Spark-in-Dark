@@ -3,6 +3,8 @@ using TMPro;
 
 public class NodeSelectionPanel : MonoBehaviour
 {
+    [Header("References")]
+    [SerializeField] private MapManager mapManager;
     [SerializeField] private GameObject root;
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text descriptionText;
@@ -26,12 +28,12 @@ public class NodeSelectionPanel : MonoBehaviour
 
     public void OnConfirm()
     {
-        MapManager.Instance.ConfirmSelection();
+        mapManager.ConfirmSelection();
     }
 
     public void OnClose()
     {
-        MapManager.Instance.CancelSelection();
+        mapManager.CancelSelection();
     }
 
     private string GetDescription(NodeType type)

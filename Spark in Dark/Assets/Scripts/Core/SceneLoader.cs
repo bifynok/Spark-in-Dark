@@ -12,16 +12,14 @@ public class SceneLoader : MonoBehaviour
     
     private readonly HashSet<string> unloadingScenes = new();
 
-    private void Awake()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Init()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null) return;
 
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        var sceneLoaderGO = new GameObject("SceneLoader");
+        Instance = sceneLoaderGO.AddComponent<SceneLoader>();
+        DontDestroyOnLoad(sceneLoaderGO);
     }
 
     public void LoadSceneAdditive(string sceneName, bool setActive = false, Action onLoaded = null)
@@ -90,7 +88,7 @@ public class SceneLoader : MonoBehaviour
         LoadSceneAdditive(sceneName, setActive: false, onLoaded);
     }
 
-    public void SwitchGameplayScene(string newScene, string oldScene)
+    public void SwitchScene(string newScene, string oldScene)
     {
         LoadSceneAdditive(newScene, setActive: true, () =>
         {

@@ -5,8 +5,6 @@ using UnityEngine;
 
 public class MapManager : MonoBehaviour
 {
-    public static MapManager Instance { get; private set; }
-
     [Header("References")]
     [SerializeField] private MapNode nodePrefab;
     [SerializeField] private MapGenerator generator;
@@ -22,22 +20,35 @@ public class MapManager : MonoBehaviour
     private MapNode selectedNode;
 
     private List<MapNode> lastGeneratedNodes = new();
-    private readonly List<MapNode> chosenPath = new();
+    private readonly List<MapNode> allNodes = new();
 
+    private bool initialized;
 
-    private void Awake()
+    public void OnSceneActivated()
     {
-        if (Instance != null && Instance != this)
+        if (initialized) return;
+        initialized = true;
+
+        if (!RunManager.Instance.HasActiveRun)
         {
-            Destroy(gameObject);
+            RunManager.Instance.StartNewRun();
+            GenerateInitialNode();
+            SaveMapData();
             return;
         }
-        Instance = this;
-    }
 
-    private void Start()
-    {
-        GenerateInitialNode();
+        MapData data = RunManager.Instance.CurrentRun.map;
+
+        if (data == null)
+        {
+            ClearMap();
+            GenerateInitialNode();
+        }
+        else
+        {
+            ClearMap();
+            RestoreMap(data);
+        }
     }
 
     private void Update()
@@ -67,12 +78,8 @@ public class MapManager : MonoBehaviour
 
     private void GenerateInitialNode()
     {
-        currentNode = Instantiate(nodePrefab, Vector2.zero, Quaternion.identity);
-        currentNode.Initialize(NodeType.Event);
+        currentNode = CreateNode(Vector2.zero, NodeType.Event);
         currentNode.SetState(NodeState.Current);
-
-        chosenPath.Clear();
-        chosenPath.Add(currentNode);
 
         int nextCount = Random.Range(minNodes, maxNodes + 1);
         GenerateNextNodes(currentNode, nextCount);
@@ -86,8 +93,7 @@ public class MapManager : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            MapNode newNode = Instantiate(nodePrefab, positions[i], Quaternion.identity);
-            newNode.Initialize(GetRandomType());
+            MapNode newNode = CreateNode(positions[i], GetRandomType());
             newNode.SetPreviousNode(parent);
 
             lastGeneratedNodes.Add(newNode);
@@ -116,37 +122,162 @@ public class MapManager : MonoBehaviour
     }
 
     public void ConfirmSelection()
+{
+    if (selectedNode == null)
+        return;
+
+    currentNode.SetState(NodeState.Passed);
+
+    pathLineBuilder.DrawLine(
+        currentNode.transform.position,
+        selectedNode.transform.position
+    );
+
+    selectedNode.SetState(NodeState.Current);
+    currentNode = selectedNode;
+    selectedNode = null;
+
+    selectionPanel.Hide();
+
+    int nextCount = Random.Range(minNodes, maxNodes + 1);
+    GenerateNextNodes(currentNode, nextCount);
+
+    RecalculateNodeStates();
+
+    SaveMapData();
+
+    if (currentNode.Type == NodeType.Battle)
     {
-        if (selectedNode == null) return;
-
-        currentNode.SetState(NodeState.Passed);
-
-        pathLineBuilder.DrawLine(
-            currentNode.transform.position,
-            selectedNode.transform.position
-        );
-
-        foreach (var node in lastGeneratedNodes)
-        {
-            if (node != selectedNode)
-                node.SetState(NodeState.Skipped);
-        }
-
-        selectedNode.SetState(NodeState.Current);
-        currentNode = selectedNode;
-        selectedNode = null;
-
-        chosenPath.Add(currentNode);
-
-        selectionPanel.Hide();
-
-        int nextCount = Random.Range(minNodes, maxNodes + 1);
-        GenerateNextNodes(currentNode, nextCount);
+        SceneLoader.Instance.SwitchScene("Scene_Battle", "Scene_Map");
     }
+}
 
     public void CancelSelection()
     {
         selectedNode = null;
         selectionPanel.Hide();
+    }
+
+    private MapNode CreateNode(Vector2 position, NodeType type)
+    {
+        MapNode node = Instantiate(nodePrefab, position, Quaternion.identity);
+        node.Initialize(type);
+
+        allNodes.Add(node);
+
+        return node;
+    }
+
+    private void SaveMapData()
+    {
+        MapData data = new MapData();
+
+        Dictionary<MapNode, int> idMap = new();
+
+        for (int i = 0; i < allNodes.Count; i++)
+            idMap[allNodes[i]] = i;
+
+        foreach (var node in allNodes)
+        {
+            MapNodeData nodeData = new MapNodeData
+            {
+                id = idMap[node],
+                type = node.Type,
+                state = node.State,
+                position = node.transform.position,
+                previousNodeId = node.PreviousNode != null ? idMap[node.PreviousNode] : null
+            };
+
+            if (node.NextNodes != null)
+            {
+                foreach (var next in node.NextNodes)
+                    nodeData.nextNodeIds.Add(idMap[next]);
+            }
+
+            data.nodes.Add(nodeData);
+
+            if (node.State == NodeState.Current)
+                data.currentNodeId = nodeData.id;
+        }
+
+        RunManager.Instance.CurrentRun.map = data;
+    }
+
+    private void RestoreMap(MapData data)
+    {
+        Dictionary<int, MapNode> created = new();
+
+        foreach (var nodeData in data.nodes)
+        {
+            MapNode node = CreateNode(nodeData.position, nodeData.type);
+            node.SetState(nodeData.state);
+
+            created[nodeData.id] = node;
+        }
+
+        foreach (var nodeData in data.nodes)
+        {
+            MapNode node = created[nodeData.id];
+
+            if (nodeData.previousNodeId.HasValue)
+                node.SetPreviousNode(created[nodeData.previousNodeId.Value]);
+
+            if (nodeData.nextNodeIds.Count > 0)
+            {
+                MapNode[] next = nodeData.nextNodeIds
+                    .ConvertAll(id => created[id])
+                    .ToArray();
+
+                node.SetNextNodes(next);
+            }
+        }
+
+        currentNode = created[data.currentNodeId];
+
+        RestorePathLines(created);
+    }
+
+    private void RestorePathLines(Dictionary<int, MapNode> nodes)
+    {
+        foreach (var node in nodes.Values)
+        {
+            if (node.PreviousNode != null &&
+                (node.State == NodeState.Current || node.State == NodeState.Passed))
+            {
+                pathLineBuilder.DrawLine(
+                    node.PreviousNode.transform.position,
+                    node.transform.position
+                );
+            }
+        }
+    }
+
+    private void ClearMap()
+    {
+        foreach (var node in allNodes)
+            Destroy(node.gameObject);
+
+        allNodes.Clear();
+        lastGeneratedNodes.Clear();
+        currentNode = null;
+        selectedNode = null;
+    }
+
+    private void RecalculateNodeStates()
+    {
+        foreach (var node in allNodes)
+        {
+            if (node.State == NodeState.Passed || node.State == NodeState.Current)
+                continue;
+
+            if (node.PreviousNode == currentNode)
+            {
+                node.SetState(NodeState.Future);
+            }
+            else
+            {
+                node.SetState(NodeState.Skipped);
+            }
+        }
     }
 }
