@@ -101,4 +101,4 @@ InitTestScene*.unity*
 
 # My own ignores
 *.docx
-GameDev Rules.txt
+*.txt

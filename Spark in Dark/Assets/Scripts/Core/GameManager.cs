@@ -17,19 +17,12 @@ public class GameManager : MonoBehaviour
 
     public void StartNewGame()
     {
-        SceneLoader.Instance.LoadSceneAdditive("Scene_Map", true, () =>
-        {
-            var mapManager = Object.FindFirstObjectByType<MapManager>();
-            mapManager.OnSceneActivated();
-
-            StartCoroutine(UnloadMenuNextFrame());
-        });
+        SceneLoader.Instance.SwitchScene("Scene_Map","Scene_MainMenu");
     }
 
-    private IEnumerator UnloadMenuNextFrame()
+    public void ToMap()
     {
-        yield return null;
-        SceneLoader.Instance.UnloadScene("Scene_MainMenu");
+        SceneLoader.Instance.SwitchScene("Scene_Map","Scene_Battle");
     }
 
     public void QuitGame()

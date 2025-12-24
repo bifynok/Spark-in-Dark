@@ -92,7 +92,29 @@ public class SceneLoader : MonoBehaviour
     {
         LoadSceneAdditive(newScene, setActive: true, () =>
         {
-            UnloadScene(oldScene);
+            StartCoroutine(EnterAndUnloadCoroutine(newScene, oldScene));
         });
+    }
+
+    private void EnterScene(string sceneName)
+    {
+        Scene scene = SceneManager.GetSceneByName(sceneName);
+
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            foreach (var entry in root.GetComponentsInChildren<ISceneEntryPoint>(true))
+            {
+                entry.OnSceneEnter();
+            }
+        }
+    }
+
+    private IEnumerator EnterAndUnloadCoroutine(string newScene, string oldScene)
+    {
+        EnterScene(newScene);
+
+        yield return null;
+
+        UnloadScene(oldScene);
     }
 }
