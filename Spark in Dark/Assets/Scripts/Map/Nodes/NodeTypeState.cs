@@ -1,11 +1,11 @@
 public enum NodeType
 {
     Battle,
-    EliteBattle,
-    BossBattle,
+    // EliteBattle,
+    // BossBattle,
     Event,
     Shop,
-    Treasure
+    // Treasure
 }
 
 public enum NodeState

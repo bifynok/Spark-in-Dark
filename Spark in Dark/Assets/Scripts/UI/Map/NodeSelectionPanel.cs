@@ -41,11 +41,11 @@ public class NodeSelectionPanel : MonoBehaviour
         return type switch
         {
             NodeType.Battle => "It's time to warm up.",
-            NodeType.EliteBattle => "High risk, high reward.",
-            NodeType.BossBattle => "A big guy and big problems... for you",
+            // NodeType.EliteBattle => "High risk, high reward.",
+            // NodeType.BossBattle => "A big guy and big problems... for you",
             NodeType.Shop => "Your gold - my gold.",
             NodeType.Event => "What awaits you here?",
-            NodeType.Treasure => "Oo, shiny.",
+            // NodeType.Treasure => "Oo, shiny.",
             _ => ""
         };
     }

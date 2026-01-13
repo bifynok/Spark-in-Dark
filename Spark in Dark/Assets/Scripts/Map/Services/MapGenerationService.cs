@@ -5,14 +5,16 @@ public class MapGenerationService
 {
     private readonly MapNode nodePrefab;
     private readonly MapGenerator positionGenerator;
+    private readonly NodeContentDatabase contentDb;
 
     private readonly int minNodes;
     private readonly int maxNodes;
 
-    public MapGenerationService(MapNode nodePrefab, MapGenerator positionGenerator, int minNodes, int maxNodes)
+    public MapGenerationService(MapNode nodePrefab, MapGenerator positionGenerator, NodeContentDatabase contentDb, int minNodes, int maxNodes)
     {
         this.nodePrefab = nodePrefab;
         this.positionGenerator = positionGenerator;
+        this.contentDb = contentDb;
         this.minNodes = minNodes;
         this.maxNodes = maxNodes;
     }
@@ -20,7 +22,10 @@ public class MapGenerationService
     public MapNode CreateInitialNode()
     {
         MapNode node = Object.Instantiate(nodePrefab, Vector2.zero, Quaternion.identity);
-        node.Initialize(NodeType.Event);
+
+        NodeContent content = contentDb.GetRandomByType(NodeType.Event);
+        node.Initialize(content);
+
         return node;
     }
 
@@ -39,7 +44,11 @@ public class MapGenerationService
         for (int i = 0; i < count; i++)
         {
             MapNode node = Object.Instantiate(nodePrefab, positions[i], Quaternion.identity);
-            node.Initialize(GetRandomType());
+
+            NodeType type = GetRandomType();
+            NodeContent content = contentDb.GetRandomByType(type);
+
+            node.Initialize(content);
             node.SetPreviousNode(parentNode);
 
             nodes.Add(node);
@@ -52,9 +61,7 @@ public class MapGenerationService
 
     private NodeType GetRandomType()
     {
-        return (NodeType)Random.Range(
-            0,
-            System.Enum.GetValues(typeof(NodeType)).Length
-        );
+        var values = (NodeType[])System.Enum.GetValues(typeof(NodeType));
+        return values[Random.Range(0, values.Length)];
     }
 }

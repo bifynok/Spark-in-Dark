@@ -14,6 +14,9 @@ public class MapManager : MonoBehaviour, ISceneEntryPoint
     [SerializeField] private int minNodes = 3;
     [SerializeField] private int maxNodes = 4;
 
+    [Header("Content")]
+    [SerializeField] private NodeContentDatabase contentDb;
+
     private MapTraversalService traversal;
     private MapGenerationService generation;
     private MapPersistenceService persistence;
@@ -51,11 +54,12 @@ public class MapManager : MonoBehaviour, ISceneEntryPoint
         generation = new MapGenerationService(
             nodePrefab,
             positionGenerator,
+            contentDb,
             minNodes,
             maxNodes
         );
 
-        persistence = new MapPersistenceService(nodePrefab);
+        persistence = new MapPersistenceService(nodePrefab, contentDb);
     }
 
     private void BindInput()

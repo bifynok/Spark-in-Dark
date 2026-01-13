@@ -10,11 +10,20 @@ public class MapNode : MonoBehaviour
 
     public MapNode PreviousNode { get; private set; }
 
+    public NodeContent Content {get; private set; }
+
     [SerializeField] private MapNodeView mapNodeView;
 
-    public void Initialize(NodeType type)
+    public void Initialize(NodeContent content)
     {
-        Type = type;
+        if (content == null)
+        {
+            Debug.LogError("MapNode.Initialize called with null content", this);
+            return;
+        }
+
+        Content = content;
+        Type = content.Type;
         State = NodeState.Future;
         UpdateView();
     }

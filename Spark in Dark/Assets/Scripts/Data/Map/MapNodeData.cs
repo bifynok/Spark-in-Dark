@@ -7,10 +7,13 @@ public class MapNodeData
     public int id;
 
     public NodeType type;
+    public string contentId;
+
     public NodeState state;
 
     public Vector2 position;
 
-    public int? previousNodeId;
+    public bool hasPrevious;
+    public int previousNodeId;    
     public List<int> nextNodeIds = new();
 }

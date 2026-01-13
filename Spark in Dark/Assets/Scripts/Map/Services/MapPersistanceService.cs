@@ -4,10 +4,12 @@ using UnityEngine;
 public class MapPersistenceService
 {
     private readonly MapNode nodePrefab;
+    private readonly NodeContentDatabase contentDb;
 
-    public MapPersistenceService(MapNode nodePrefab)
+    public MapPersistenceService(MapNode nodePrefab, NodeContentDatabase contentDb)
     {
         this.nodePrefab = nodePrefab;
+        this.contentDb = contentDb;
     }
 
     public MapData Save(IReadOnlyList<MapNode> nodes, MapNode currentNode)
@@ -24,11 +26,11 @@ public class MapPersistenceService
             {
                 id = idMap[node],
                 type = node.Type,
+                contentId = node.Content.Id,
                 state = node.State,
                 position = node.transform.position,
-                previousNodeId = node.PreviousNode != null
-                    ? idMap[node.PreviousNode]
-                    : null
+                hasPrevious = node.PreviousNode != null,
+                previousNodeId = node.PreviousNode != null ? idMap[node.PreviousNode] : -1
             };
 
             if (node.NextNodes != null)
@@ -59,7 +61,8 @@ public class MapPersistenceService
                 Quaternion.identity
             );
 
-            node.Initialize(nodeData.type);
+            NodeContent content = contentDb.GetById(nodeData.contentId);
+            node.Initialize(content);
             node.SetState(nodeData.state);
 
             created[nodeData.id] = node;
@@ -70,8 +73,8 @@ public class MapPersistenceService
         {
             MapNode node = created[nodeData.id];
 
-            if (nodeData.previousNodeId.HasValue)
-                node.SetPreviousNode(created[nodeData.previousNodeId.Value]);
+            if (nodeData.hasPrevious)
+                node.SetPreviousNode(created[nodeData.previousNodeId]);
 
             if (nodeData.nextNodeIds.Count > 0)
             {
@@ -86,5 +89,4 @@ public class MapPersistenceService
         currentNode = created[data.currentNodeId];
         return nodes;
     }
-
 }
